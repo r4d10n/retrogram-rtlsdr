@@ -34,6 +34,7 @@ Hacked from Ettus UHD RX ASCII Art DFT code - adapted for RTL SDR dongle.
 #include <rtl-sdr.h>
 
 #define EXIT_ON_ERR false
+#define DISABLE_STDERR true
 
 namespace po = boost::program_options;
 using std::chrono::high_resolution_clock;
@@ -53,7 +54,7 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
         fprintf(stderr, "WARNING: Failed to set center freq.\n");
         exiterr(0);
     } else {
-        //fprintf(stderr, "Tuned to %u Hz.\n", frequency);
+        fprintf(stderr, "Tuned to %u Hz.\n", frequency);
     }
     return r;
 }
@@ -66,7 +67,7 @@ int verbose_set_sample_rate(rtlsdr_dev_t *dev, uint32_t samp_rate)
         fprintf(stderr, "WARNING: Failed to set sample rate.\n");
         exiterr(0);
     } else {
-        //fprintf(stderr, "Sampling at %u S/s.\n", samp_rate);
+        fprintf(stderr, "Sampling at %u S/s.\n", samp_rate);
     }
     return r;
 }
@@ -107,7 +108,7 @@ int verbose_auto_gain(rtlsdr_dev_t *dev)
         fprintf(stderr, "WARNING: Failed to set tuner gain.\n");
         exiterr(0);
     } else {
-        //fprintf(stderr, "Tuner gain set to automatic.\n");
+        fprintf(stderr, "Tuner gain set to automatic.\n");
     }
     return r;
 }
@@ -125,7 +126,7 @@ int verbose_gain_set(rtlsdr_dev_t *dev, int gain)
         fprintf(stderr, "WARNING: Failed to set tuner gain.\n");
         exiterr(0);
     } else {
-        //fprintf(stderr, "Tuner gain set to %0.2f dB.\n", gain/10.0);
+        fprintf(stderr, "Tuner gain set to %0.2f dB.\n", gain/10.0);
     }
     return r;
 }
@@ -289,9 +290,10 @@ int main(int argc, char *argv[]){
 
     std::vector<std::complex<float> > buff(num_bins);
 
-    /* Reset endpoint before we start reading from it (mandatory) */
+
     buffer = (uint8_t*)malloc(num_bins * 2 * sizeof(uint8_t));
 
+    /* Reset endpoint before we start reading from it (mandatory) */
     verbose_reset_buffer(dev);
 
     
@@ -301,6 +303,10 @@ int main(int argc, char *argv[]){
     initscr();
     
     auto next_refresh = high_resolution_clock::now();
+
+    //disable stderr on ncurses screen
+    if (DISABLE_STDERR) freopen("/dev/null", "w", stderr);
+
 
     float i,q;
 
@@ -357,7 +363,9 @@ int main(int argc, char *argv[]){
         //curses screen handling: clear and print frame
         clear();        
         printw("-%s-={ retrogram~rtlsdr }=-%s--",header.c_str(),header.c_str());
-        printw("[f-F]req: %4.3f MHz   |   [r-R]ate: %2.2f Msps   |    [g-G]ain: %2.0f dB\n\n", freq/1e6, rate/1e6, gain/10);
+        printw("[f-F]req: %4.3f MHz   |   [r-R]ate: %2.2f Msps   |    ", freq/1e6, rate/1e6);
+        if (gain == 0) printw("[g-G]ain: (Auto)\n\n");    
+        else printw("[g-G]ain: %2.0f dB\n\n", gain/10);    
         printw("[d-D]yn Range: %2.0f dB    |   Ref [l-L]evel: %2.0f dB   |   fp[s-S] : %2.0f   |   [t-T]uning step: %3.3f M\n", dyn_rng, ref_lvl, frame_rate, step/1e6);
 	    printw("%s", border.c_str());
         printw("%s\n", frame.c_str());

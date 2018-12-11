@@ -13,8 +13,11 @@
 Wideband Spectrum analyzer on your terminal/ssh console with ASCII art. 
 Hacked from Ettus UHD RX ASCII Art DFT code for RTLSDR. Adapted from [retrogram~plutosdr](https://github.com/r4d10n/retrogram-plutosdr). 
 
-![retrogram-rtlsdr](https://i.imgur.com/BGmYK5i.jpg)
+![retrogram-rtlsdr-vhf](https://i.imgur.com/BGmYK5i.jpg)
 [Tuning on VHF band while transmitting on 145.500 MHz with Handheld Radio]
+
+![retrogram-rtlsdr-gsm](https://imgur.com/REhEnv2.jpg)
+[Spotting FCCH (Freq. Correction) burst in the local GSM BCCH (Broadcast Control Channel) @ 938.2 MHz]
 
 Pan & Zoom spectrum using keyboard controls [decrement-Increment]. 
 
