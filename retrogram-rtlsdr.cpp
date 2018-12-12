@@ -215,9 +215,7 @@ int main(int argc, char *argv[]){
     int num_bins = 512;
     double rate, freq, step, gain, ngain, frame_rate;
     float ref_lvl, dyn_rng;
-    
-    //ssize_t ret;
-    //char attr_buf[1024];
+  
 
     int ch;
 
@@ -290,7 +288,6 @@ int main(int argc, char *argv[]){
 
     std::vector<std::complex<float> > buff(num_bins);
 
-
     buffer = (uint8_t*)malloc(num_bins * 2 * sizeof(uint8_t));
 
     /* Reset endpoint before we start reading from it (mandatory) */
@@ -324,7 +321,7 @@ int main(int argc, char *argv[]){
                break;
         }
 
-        if ((uint32_t)n_read < (num_bins * 2)) 
+        if (n_read < (num_bins * 2)) 
         {
                 fprintf(stderr, "Short read, samples lost, exiting!\n");
                 break;
@@ -395,7 +392,7 @@ int main(int argc, char *argv[]){
 
         else if (ch == 'g')
         {
-            if (gain > 1)   
+            if ((gain-10) > 1)   
             {
                 gain -= 10;
                 ngain = nearest_gain(dev, gain);
@@ -405,7 +402,7 @@ int main(int argc, char *argv[]){
 
         else if (ch == 'G')
         {
-            if (gain < 500)
+            if ((gain + 10) < 500)
             {
                 gain += 10;
                 ngain = nearest_gain(dev, gain);
@@ -431,8 +428,6 @@ int main(int argc, char *argv[]){
         else if (ch == 'D') dyn_rng += 10;
         else if (ch == 's') { if (frame_rate > 1) frame_rate -= 1; }
         else if (ch == 'S') frame_rate += 1;
-        else if (ch == 'n') { if (num_bins > 2) num_bins /= 2; }
-        else if (ch == 'N') num_bins *= 2;
         else if (ch == 't') { if (step > 1) step /= 2; }
         else if (ch == 'T') step *= 2;
  
