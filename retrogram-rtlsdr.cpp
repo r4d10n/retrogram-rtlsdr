@@ -46,6 +46,8 @@ void exiterr(int retcode)
     if (EXIT_ON_ERR) exit(retcode);
 }
 
+// Convenience functions from librtlsdr - (C) 2014 by Kyle Keen <keenerd@gmail.com>
+
 int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
 {
     int r;
@@ -215,10 +217,11 @@ int main(int argc, char *argv[]){
     int num_bins = 512;
     double rate, freq, step, gain, ngain, frame_rate;
     float ref_lvl, dyn_rng;
-  
+    bool show_controls; 
 
     int ch;
-
+    bool loop = true;
+    
     //setup the program options
     po::options_description desc("\nAllowed options");
     desc.add_options()
@@ -233,6 +236,7 @@ int main(int argc, char *argv[]){
         ("ref-lvl", po::value<float>(&ref_lvl)->default_value(0), "reference level for the display (dB) [l-L]")
         ("dyn-rng", po::value<float>(&dyn_rng)->default_value(80), "dynamic range for the display (dB) [d-D]")
         ("step", po::value<double>(&step)->default_value(1e5), "tuning step for rate/bw/freq [t-T]")
+        ("show-controls", po::value<bool>(&show_controls)->default_value(true), "show the keyboard controls")
     ;
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -310,7 +314,7 @@ int main(int argc, char *argv[]){
     //------------------------------------------------------------------
     //-- Main loop
     //------------------------------------------------------------------
-    while (true){
+    while (loop){
         
         buff.clear();
     
@@ -348,7 +352,7 @@ int main(int argc, char *argv[]){
             ascii_art_dft::log_pwr_dft(&buff.front(), buff.size())
         );
         std::string frame = ascii_art_dft::dft_to_plot(
-            lpdft, COLS, LINES-5,
+            lpdft, COLS, (show_controls ? LINES-5 : LINES),
             rate, 
             freq, 
             dyn_rng, ref_lvl
@@ -359,102 +363,114 @@ int main(int argc, char *argv[]){
     
         //curses screen handling: clear and print frame
         clear();        
-        printw("-%s-={ retrogram~rtlsdr }=-%s--",header.c_str(),header.c_str());
-        printw("[f-F]req: %4.3f MHz   |   [r-R]ate: %2.2f Msps   |    ", freq/1e6, rate/1e6);
-        if (gain == 0) printw("[g-G]ain: (Auto)\n\n");    
-        else printw("[g-G]ain: %2.0f dB\n\n", gain/10);    
-        printw("[d-D]yn Range: %2.0f dB    |   Ref [l-L]evel: %2.0f dB   |   fp[s-S] : %2.0f   |   [t-T]uning step: %3.3f M\n", dyn_rng, ref_lvl, frame_rate, step/1e6);
-	    printw("%s", border.c_str());
+        if (show_controls)
+        {
+            printw("-%s-={ retrogram~rtlsdr }=-%s--",header.c_str(),header.c_str());
+            printw("[f-F]req: %4.3f MHz   |   [r-R]ate: %2.2f Msps   |    ", freq/1e6, rate/1e6);
+            if (gain == 0) printw("[g-G]ain: (Auto)\n\n");    
+            else printw("[g-G]ain: %2.0f dB\n\n", gain/10);    
+            printw("[d-D]yn Range: %2.0f dB    |   Ref [l-L]evel: %2.0f dB   |   fp[s-S] : %2.0f   |   [t-T]uning step: %3.3f M\n", dyn_rng, ref_lvl, frame_rate, step/1e6);
+    	    printw("%s", border.c_str());
+        }
         printw("%s\n", frame.c_str());
 
         //curses key handling: no timeout, any key to exit
         timeout(0);
         ch = getch();
 
-        if (ch == 'r')
+        switch(ch)
         {
-            if ((rate - step) > 0) 
+            case 'r':
             {
-                rate -= step;                
-                verbose_set_sample_rate(dev, rate);
+                if ((rate - step) > 0) 
+                {
+                    rate -= step;                
+                    verbose_set_sample_rate(dev, rate);
+                }
+                break;
             }
-            
-        }
 
-        else if (ch == 'R')
-        {
-            if ((rate + step) < 2.4e6)
+            case 'R':
             {
-                rate += step;
-                verbose_set_sample_rate(dev, rate);
+                if ((rate + step) < 2.4e6)
+                {
+                    rate += step;
+                    verbose_set_sample_rate(dev, rate);
+                }
+                break;
             }
-        }
 
-        else if (ch == 'g')
-        {
-            if ((gain-10) > 1)   
+            case 'g':
             {
-                gain -= 10;
-                ngain = nearest_gain(dev, gain);
-                verbose_gain_set(dev, ngain);
+                if ((gain-10) > 1)   
+                {
+                    gain -= 10;
+                    ngain = nearest_gain(dev, gain);
+                    verbose_gain_set(dev, ngain);
+                }
+                break;
             }
-        }
 
-        else if (ch == 'G')
-        {
-            if ((gain + 10) < 500)
+            case 'G':
             {
-                gain += 10;
-                ngain = nearest_gain(dev, gain);
-                verbose_gain_set(dev, ngain);
+                if ((gain + 10) < 500)
+                {
+                    gain += 10;
+                    ngain = nearest_gain(dev, gain);
+                    verbose_gain_set(dev, ngain);
+                }
+                break;
             }
+
+            case 'f':
+            {
+                freq -= step;
+                verbose_set_frequency(dev, freq);
+                break;
+            }
+
+            case 'F':
+            {
+                freq += step;
+                verbose_set_frequency(dev, freq);
+                break;
+            }
+
+            case 'l': { ref_lvl -= 10; break; }            
+            case 'L': { ref_lvl += 10; break; }
+            case 'd': { dyn_rng -= 10; break; }
+            case 'D': { dyn_rng += 10; break; }
+            case 's': { if (frame_rate > 1) frame_rate -= 1; break;}
+            case 'S': { frame_rate += 1; break; }
+            case 't': { if (step > 1) step /= 2; break; }
+            case 'T': { step *= 2; break; }
+            case 'c': { show_controls = false; break; }
+            case 'C': { show_controls = true; break; }
+
+            case 'q':
+            case 'Q': { loop = false; break; }
+
         }
 
-        else if (ch == 'f')
-        {
-            freq -= step;
-            verbose_set_frequency(dev, freq);                               
-        }
-
-        else if (ch == 'F')
-        {
-            freq += step;
-            verbose_set_frequency(dev, freq);                               
-        }
-
-        else if (ch == 'l') ref_lvl -= 10;
-        else if (ch == 'L') ref_lvl += 10;
-        else if (ch == 'd') dyn_rng -= 10;
-        else if (ch == 'D') dyn_rng += 10;
-        else if (ch == 's') { if (frame_rate > 1) frame_rate -= 1; }
-        else if (ch == 'S') frame_rate += 1;
-        else if (ch == 't') { if (step > 1) step /= 2; }
-        else if (ch == 'T') step *= 2;
- 
-        else if (ch == '\033')    // '\033' '[' 'A'/'B'/'C'/'D' -- Up / Down / Right / Left Press 
+        if (ch == '\033')    // '\033' '[' 'A'/'B'/'C'/'D' -- Up / Down / Right / Left Press 
         {
             getch();
             switch(getch())
             {
-		        case 'A':
+    	        case 'A':
                 case 'C':
                     freq += step;
                     verbose_set_frequency(dev, freq);                               
                 
                     break;
 
-		        case 'B':
+    	        case 'B':
                 case 'D':                    
                     freq -= step;
                     verbose_set_frequency(dev, freq);
                         
                     break;
             }
-        }
-        
-        else if (ch != KEY_RESIZE and ch != ERR) 
-        {
-            break;
         }
     }
 
