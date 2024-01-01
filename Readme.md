@@ -22,6 +22,7 @@ Hacked from Ettus UHD RX ASCII Art DFT code for RTLSDR. Adapted from [retrogram~
 Pan & Zoom spectrum using keyboard controls [decrement-Increment]. [[Full feature demo](https://www.youtube.com/watch?v=JnrknBrvYjw)]
 
 * Center Frequency 	using keys [f-F] 
+* PPM correction	using keys [p-P]
 * Sampling rate    	using keys [r-R]
 * Gain 		   	using keys [g-G]
 * Reference level  	using keys [l-L] 
@@ -39,6 +40,7 @@ Tuning step applies for decrementing / Incrementing Center Frequency and Samplin
 	Allowed options:
 	  --help                   help message
 	  --dev arg (=0)           rtl-sdr device index
+      --ppm arg (=0)           ppm error adjustment [p-P]
 	  --rate arg (=1000000)    rate of incoming samples (sps) [r-R]
 	  --freq arg (=100000000)  RF center frequency in Hz [f-F]
 	  --gain arg (=0)          gain for the RF chain [g-G]
