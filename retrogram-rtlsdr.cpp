@@ -62,6 +62,19 @@ int verbose_set_frequency(rtlsdr_dev_t *dev, uint32_t frequency)
     return r;
 }
 
+int verbose_set_freq_correction(rtlsdr_dev_t *dev, int ppm)
+{
+    int r;
+    r = rtlsdr_set_freq_correction(dev, ppm);
+    if (r < 0) {
+        fprintf(stderr, "WARNING: Failed to set frequency correction ppm.\n");
+        exiterr(0);
+    } else {
+        fprintf(stderr, "Frequency correction at %d ppm.\n", ppm);
+    }
+    return r;
+}
+
 int verbose_set_sample_rate(rtlsdr_dev_t *dev, uint32_t samp_rate)
 {
     int r;
@@ -217,6 +230,7 @@ int main(int argc, char *argv[]){
 
     int num_bins = 512;
     double rate, freq, step, gain, ngain, frame_rate;
+	int ppm;	// frequency correction in parts per million
     float ref_lvl, dyn_rng;
     bool show_controls;
     bool peak_hold;
@@ -230,6 +244,7 @@ int main(int argc, char *argv[]){
         ("help", "help message")
         ("dev", po::value<std::string>(&dev_id)->default_value("0"), "rtl-sdr device index")
         // hardware parameters
+        ("ppm", po::value<int>(&ppm)->default_value(0), "ppm error adjustment [p-P]")
         ("rate", po::value<double>(&rate)->default_value(1e6), "rate of incoming samples (sps) [r-R]")
         ("freq", po::value<double>(&freq)->default_value(100e6), "RF center frequency in Hz [f-F]")
         ("gain", po::value<double>(&gain)->default_value(0), "gain for the RF chain [g-G]")
@@ -269,6 +284,9 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
 
+    //set the frequency correction ppm
+    std::cout << boost::format("Setting error correction: %d ppm...") % (ppm) << std::endl;
+    verbose_set_freq_correction(dev, ppm);
 
     //set the sample rate
     std::cout << boost::format("Setting RX Rate: %f Msps...") % (rate/1e6) << std::endl;
@@ -386,11 +404,11 @@ int main(int argc, char *argv[]){
         if (show_controls)
         {
             printw("-%s-={ retrogram~rtlsdr }=-%s--",header.c_str(),header.c_str());
-            printw("[f-F]req: %4.3f MHz   |   [r-R]ate: %2.2f Msps   |    ", freq/1e6, rate/1e6);
+            printw("[f-F]req: %4.3f MHz   |   [r-R]ate: %2.2f Msps    |   [p-P]pm: %4d  |   ", freq/1e6, rate/1e6, ppm);
             if (gain == 0) printw("[g-G]ain: (Auto)");
             else printw("[g-G]ain: %2.0f dB", gain/10);
-            printw("   |    Peak [h-H]hold: %s\n\n", peak_hold ? "On" : "Off");
-            printw("[d-D]yn Range: %2.0f dB    |   Ref [l-L]evel: %2.0f dB   |   fp[s-S] : %2.0f   |   [t-T]uning step: %3.3f M\n", dyn_rng, ref_lvl, frame_rate, step/1e6);
+            printw("    |    Peak [h-H]hold: %s\n", peak_hold ? "On" : "Off");
+            printw("[d-D]yn Range: %2.0f dB    |   Ref [l-L]evel: %2.0f dB   |   fp[s-S]: %4.0f  |   [t-T]uning step: %3.3f M\n", dyn_rng, ref_lvl, frame_rate, step/1e6);
     	    printw("%s", border.c_str());
         }
         printw("%s\n", frame.c_str());
@@ -401,6 +419,26 @@ int main(int argc, char *argv[]){
 
         switch(ch)
         {
+            case 'p':
+            {
+                if ((ppm - 1) >= -500)
+                {
+                    ppm--;
+                    verbose_set_freq_correction(dev, ppm);
+                }
+                break;
+            }
+
+            case 'P':
+            {
+                if ((ppm + 1) <= 500)
+                {
+                    ppm++;
+                    verbose_set_freq_correction(dev, ppm);
+                }
+                break;
+            }
+
             case 'r':
             {
                 if ((rate - step) > 0)
